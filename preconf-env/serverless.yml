@@ -15,9 +15,3 @@ environment:
 profiles:
   local: local
   testperu: testperu
-
-# vpcdb:
-#   securityGroupIds:
-#     - sg-051f4c8e38f2fc154
-#   subnetIds:
-#     - subnet-0b49d21941c3e05c3
