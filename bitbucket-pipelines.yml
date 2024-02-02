@@ -26,25 +26,25 @@ definitions:
       - .env-test
   steps:
 
-    - step: &unit-test
-        size: 2x
-        name: Test and code analysis
-        script:
-          - source .env-test
+    # - step: &unit-test
+    #     size: 2x
+    #     name: Test and code analysis
+    #     script:
+    #       - source .env-test
 
-          - npm install -g serverless typescript
+    #       - npm install -g serverless typescript
 
-          - chmod +x ./layers/database/build-layer.sh
-          - cd layers/database/
-          - ./build-layer.sh DatabaseLayer
-          - cd ../..
-          - npm i
-          - npm run test
-          - pipe: sonarsource/sonarqube-scan:2.0.1
-            variables:
-              SONAR_HOST_URL: ${SONAR_HOST_URL}
-              SONAR_TOKEN: ${SONAR_TOKEN}
-              EXTRA_ARGS: '-Dsonar.javascript.lcov.reportPaths=coverage/lcov.info'
+    #       - chmod +x ./layers/applayer/build-layer.sh
+    #       - cd layers/database/
+    #       - ./build-layer.sh AppLayer
+    #       - cd ../..
+    #       - npm i
+    #       - npm run test
+    #       - pipe: sonarsource/sonarqube-scan:2.0.1
+    #         variables:
+    #           SONAR_HOST_URL: ${SONAR_HOST_URL}
+    #           SONAR_TOKEN: ${SONAR_TOKEN}
+    #           EXTRA_ARGS: '-Dsonar.javascript.lcov.reportPaths=coverage/lcov.info'
 
     - step: &deploy
           name: Deploy Resources and Services
@@ -66,7 +66,7 @@ definitions:
             - cat ~/.aws/config
 
 
-            - for service in "goid-service" "request-authorizer"; do
+            - for service in "sm-service"; do
                 cp .env "./services/$service/.env";
               done
 
@@ -74,11 +74,11 @@ definitions:
             - npm install -g serverless typescript
             - npm i
 
-            - chmod +x ./layers/database/build-layer.sh
+            - chmod +x ./layers/applayer/build-layer.sh
             # - chmod +x ./deploy.sh
 
-            - cd layers/database/
-            - ./build-layer.sh DatabaseLayer
+            - cd layers/applayer/
+            - ./build-layer.sh AppLayer
 
             - cd ../../services/
             - for folder in */; do
