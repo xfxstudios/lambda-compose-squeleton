@@ -1,0 +1,65 @@
+service: main-service
+
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  timeout: 120
+  stage: ${opt:stage}
+  region: us-east-1
+  profile: ${self:custom.profiles.${self:provider.stage}}
+
+  environment: ${file(../../preconf-env/serverless.yml):environment}
+
+  memorySize: 128
+  httpApi:
+    id: ${param:AppHttpApiId,''}
+  
+  layers:
+    - "${param:AppLambdaLayerExport, env:DATABASE_LAYER}"
+  
+  # vpc: ${file(../../preconf-env/serverless.yml):vpcdb}
+
+functions:
+
+# Client config >>>
+  TestApp:
+    handler: .dist/src/TestService.main
+    events:
+      - httpApi:
+          method: POST
+          path: /test/testService
+    warmup: 
+      default: 
+        enabled: false
+
+plugins:
+  - serverless-plugin-warmup
+  # - serverless-offline
+  # - serverless-dotenv-plugin
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  fullName: ${self:service}-${self:custom.stage}
+  retainVersions: 2
+  serverless-offline:
+    httpPort: 4000
+  defaultStage: dev
+  profiles: ${file(../../preconf-env/serverless.yml):profiles}
+  dotenv:
+    path: ../../.env
+  warmup:
+    default:
+      name: warmer-default-${opt:stage, self:provider.stage}
+      enabled: true
+      events:
+        - schedule: rate(5 minutes)
+      prewarm: true
+
+package:
+  include:
+    - ".dist/**"
+  exclude:
+    - "node_modules/**"
+    - "src/**"

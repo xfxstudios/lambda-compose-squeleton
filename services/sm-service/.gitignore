@@ -1,0 +1,7 @@
+.build/
+.dist/
+deploy/
+logs/
+node_modules/
+.env
+.ssh/

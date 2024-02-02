@@ -1,0 +1,186 @@
+image: node:18
+
+definitions:
+
+  step:
+  - &prep-environment
+    name: Prepare environment variables
+    script:
+      - echo "DEPLOY_STAGE=$DEPLOY_STAGE" > .env
+      - echo "AWS_PROFILE=$AWS_PROFILE" >> .env
+
+      - echo "DATABASE_HOST=$DATABASE_HOST" >> .env
+      - echo "DATABASE_PORT=$DATABASE_PORT" >> .env
+      - echo "DATABASE_USERNAME=$DATABASE_USERNAME" >> .env
+      - echo "DATABASE_PASSWORD=$DATABASE_PASSWORD" >> .env
+      - echo "DATABASE_NAME=$DATABASE_NAME" >> .env
+
+      - echo "AWS_ACCESS_KEY_ID=$AWS_APP_ACCESS" >> .env
+      - echo "AWS_SECRET_ACCESS_KEY=$AWS_APP_SECRET" >> .env
+      - echo "AWS_DEFAULT_REGION=$AWS_APP_REGION" >> .env
+      
+      - echo "WORLDSYS_USERNAME=$WORLDSYS_USERNAME" >> .env
+      - echo "WORLDSYS_PASSWORD=$WORLDSYS_PASSWORD" >> .env
+      - echo "WORLDSYS_URL=$WORLDSYS_URL" >> .env
+      
+      - echo "VU_ONBOARDING_URL=$VU_ONBOARDING_URL" >> .env
+      - echo "VU_API_KEY=$VU_API_KEY" >> .env
+      - echo "VU_SECRET_KEY=$VU_SECRET_KEY" >> .env
+      
+      - echo "REDIS_HOST=$REDIS_HOST" >> .env
+      - echo "REDIS_PORT=$REDIS_PORT" >> .env
+      - echo "DEFAULT_ONBOARDING_TIMEOUT=$DEFAULT_ONBOARDING_TIMEOUT" >> .env
+      - echo "BASE_URL=$BASE_URL" >> .env
+      
+      - echo "X_SIGNATURE_KEY=$X_SIGNATURE_KEY" >> .env
+      - echo "GOID_API_KEY=$GOID_API_KEY" >> .env
+
+      - echo "SECRET_START_APIKEY=$SECRET_START_APIKEY" >> .env
+      - echo "APP_STAGE=$APP_STAGE" >> .env
+
+      - echo "SONAR_HOST_URL=$SONAR_HOST_URL" > .env-test
+      - echo "SONAR_TOKEN=$SONAR_TOKEN" >> .env-test
+    artifacts:
+      - .env
+      - .env-test
+  steps:
+
+    - step: &unit-test
+        size: 2x
+        name: Test and code analysis
+        script:
+          - source .env-test
+
+          - npm install -g serverless typescript
+
+          - chmod +x ./layers/database/build-layer.sh
+          - cd layers/database/
+          - ./build-layer.sh DatabaseLayer
+          - cd ../..
+          - npm i
+          - npm run test
+          - pipe: sonarsource/sonarqube-scan:2.0.1
+            variables:
+              SONAR_HOST_URL: ${SONAR_HOST_URL}
+              SONAR_TOKEN: ${SONAR_TOKEN}
+              EXTRA_ARGS: '-Dsonar.javascript.lcov.reportPaths=coverage/lcov.info'
+
+    - step: &deploy
+          name: Deploy Resources and Services
+          script:
+            - source .env
+
+            - apt-get update && apt-get install -y awscli
+            
+            - mkdir ~/.aws
+            - echo "[$AWS_PROFILE]" > ~/.aws/credentials
+            - echo "aws_access_key_id = $AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+            - echo "aws_secret_access_key = $AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+
+            - echo "[profile $AWS_PROFILE]" > ~/.aws/config
+            - echo "region = $AWS_DEFAULT_REGION" >> ~/.aws/config
+            - echo "output = json" >> ~/.aws/config
+
+            - cat ~/.aws/credentials
+            - cat ~/.aws/config
+
+
+            - for service in "goid-service" "request-authorizer"; do
+                cp .env "./services/$service/.env";
+              done
+
+
+            - npm install -g serverless typescript
+            - npm i
+
+            - chmod +x ./layers/database/build-layer.sh
+            # - chmod +x ./deploy.sh
+
+            - cd layers/database/
+            - ./build-layer.sh DatabaseLayer
+
+            - cd ../../services/
+            - for folder in */; do
+                  if [ -d "$folder" ] && [ "$folder" != "scripts/" ] && [ "$folder" != "node_modules/" ] && [ "$folder" != ".serverless/" ] && [ "$folder" != "layers/" ]; then
+                      echo ">>>>>>> Procesando carpeta $folder";
+                      cd "$folder";
+                      rm -rf .dist;
+                      npm install;
+                      tsc;
+                      npm ci --production;
+                      echo "<<<<<<< Completed $folder Processing.!!!";
+                      cd ..;
+                  fi
+              done
+            
+            - cd ..
+
+            - echo ">>>>>>> Preparing environment file..."
+
+            - env_vars=$(cat .env | tr "\n" " ")
+            - chmod +x ./preconf-env/serverless.yml
+            - for env_var in $env_vars; do
+                  key=$(echo $env_var | cut -d "=" -f1);
+                  value=$(echo $env_var | cut -d "=" -f2-);
+                  sed -i "s|_:$key|$value|g" ./preconf-env/serverless.yml;
+              done
+
+            - echo ">>>>>>> Deploying Resources and Services..."
+            
+
+            - sls deploy --stage $DEPLOY_STAGE
+
+            - echo "<<<<<<< Deployment Completed!!!!"
+
+
+
+pipelines:
+  # pull-requests:
+  #   '**':
+  #     - step: 
+  #         <<: *prep-environment
+  #         name: prepare environment dev
+  #         deployment: dev
+  #     - step: *unit-test
+  
+
+  branches:
+    'develop':
+      - step: 
+          <<: *prep-environment
+          name: prepare environment dev
+          deployment: dev
+      - step: 
+          <<: *deploy
+          trigger: manual
+
+    'release':
+      - step: 
+          <<: *prep-environment
+          name: prepare prod environment
+          deployment: prod
+      - step: 
+          <<: *deploy
+          trigger: manual
+
+    'develop-v2':
+      - step: 
+          <<: *prep-environment
+          name: prepare environment dev-v2
+          deployment: dev-v2
+      # - step: *unit-test
+      - step: *deploy
+
+    'qa':
+      - step: 
+          <<: *prep-environment
+          name: prepare environment qa
+          deployment: qa
+      - step: *deploy
+
+    'demo':
+      - step: 
+          <<: *prep-environment
+          name: prepare environment demo
+          deployment: demo
+      - step: *deploy

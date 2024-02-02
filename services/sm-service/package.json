@@ -1,0 +1,29 @@
+{
+  "name": "sm-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "local": "npm i && tsc && sls offline --stage local",
+    "locallayer": "cd ../../layers/applayer && sh build.sh && cd ../../services/sm-service && npm i && tsc && sls offline --stage testperu",
+    "locallayerfull": "cd ../../layers/applayer && sh build-layer.sh && cd ../../services/sm-service && npm i && tsc && sls offline --stage testperu"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.119",
+    "@types/node": "^20.5.3",
+    "AppLayer": "file:../../layers/app-layer/nodejs/node_modules/AppLayer",
+    "aws-lambda": "^1.0.7",
+    "class-validator": "^0.14.0",
+    "dotenv": "^16.3.1",
+    "serverless-dotenv-plugin": "^6.0.0",
+    "serverless-offline": "^13.3.0",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "serverless-plugin-warmup": "^8.3.0"
+  }
+}

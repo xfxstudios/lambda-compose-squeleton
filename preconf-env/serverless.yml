@@ -1,0 +1,23 @@
+environment:
+  APP_STAGE: ${env:APP_STAGE,'_:APP_STAGE'}
+  
+  DATABASE_HOST: ${param:DocumentDBClusterEndpoint, env:DATABASE_HOST}
+  DATABASE_PORT: ${param:DocumentDBClusterPort, env:DATABASE_PORT}
+  DATABASE_USERNAME: ${env:DATABASE_USERNAME,'_:DATABASE_USERNAME'}
+  DATABASE_PASSWORD: ${env:DATABASE_PASSWORD,'_:DATABASE_PASSWORD'}
+  DATABASE_NAME: ${env:DATABASE_NAME,'_:DATABASE_NAME'}
+
+  AWS_APP_REGION: ${env:AWS_APP_REGION,'_:AWS_DEFAULT_REGION'}
+  AWS_APP_ACCESS: ${env:AWS_APP_ACCESS,'_:AWS_ACCESS_KEY_ID'}
+  AWS_APP_SECRET: ${env:AWS_APP_SECRET,'_:AWS_SECRET_ACCESS_KEY'}
+  AWS_APP_DOCUMENT_BUCKET: ${env:AWS_APP_DOCUMENT_BUCKET, param:AppS3BucketName}
+
+profiles:
+  local: local
+  testperu: testperu
+
+# vpcdb:
+#   securityGroupIds:
+#     - sg-051f4c8e38f2fc154
+#   subnetIds:
+#     - subnet-0b49d21941c3e05c3

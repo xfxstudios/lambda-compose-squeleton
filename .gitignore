@@ -1,0 +1,15 @@
+node_modules/
+.dist/
+.env
+.serverless/
+.scannerwork/
+coverage
+# stubs
+
+authorizer-setup/.serverless/
+resources/.serverless/
+
+layers/app-layer
+layers/applayer/nodejs
+layers/applayer/node_modules
+layers/applayer/dist

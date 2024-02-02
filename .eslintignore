@@ -1,0 +1,8 @@
+coverage
+node_modules
+layers/database/node_modules
+database-layer
+services/goid-service/node_modules
+services/request-authorizer/node_modules
+test
+.husky

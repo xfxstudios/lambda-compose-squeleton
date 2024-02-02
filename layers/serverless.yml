@@ -1,0 +1,37 @@
+service: sm-layers
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage}
+  region: 'us-east-1'
+  profile: ${self:custom.profiles.${self:provider.stage}}
+  # vpc: ${file(../preconf-env/serverless.yml):vpc}
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  retainVersions: 2
+  fullName: ${self:service}-${self:custom.stage}
+  defaultStage: dev
+  profiles: ${file(../preconf-env/serverless.yml):profiles}
+
+layers:
+  AppLayer:
+    path: app-layer/
+    name: AppLayer-${opt:stage}
+    description: Capa de acceso a funciones globales
+    compatibleRuntimes:
+      - nodejs18.x
+    package: 
+      patterns:
+        - "!/**"
+        - "nodejs/**"
+
+resources:
+  Outputs:
+    AppLambdaLayerExport:
+      Value: {Ref: AppLayerLambdaLayer}
+      Export: 
+        Name: AppLayer-${opt:stage}
+    AppLambdaLayerName:
+      Value: AppLayer-${opt:stage}

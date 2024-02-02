@@ -1,0 +1,149 @@
+service: resources-loader
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  timeout: 30
+  stage: ${opt:stage}
+  region: us-east-1
+  profile: ${self:custom.profiles.${self:provider.stage}}
+  # vpc: ${file(../preconf-env/serverless.yml):vpc}
+
+custom:
+  profiles: ${file(../preconf-env/serverless.yml):profiles}
+
+resources:
+  Resources:
+
+    # >>> HTTP Api
+    AppHttpApi:
+      Type: AWS::ApiGatewayV2::Api
+      Properties:
+        Name: ${opt:stage}-apigateway
+        ProtocolType: HTTP
+        CorsConfiguration:
+          AllowOrigins:
+            - '*'
+          AllowHeaders:
+            - '*'
+          ExposeHeaders:
+            - '*'
+          AllowMethods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - OPTIONS
+            - DELETE
+          AllowCredentials: false
+
+    # >>> HTTP Api Stage
+    AppHttpApiStage:
+      Type: AWS::ApiGatewayV2::Stage
+      Properties:
+        ApiId:
+          Ref: AppHttpApi
+        StageName: ${opt:stage}
+        AutoDeploy: true
+
+    # >>> Client documents bucket
+    AppS3Bucket:
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      Properties:
+        BucketName: ${opt:stage}-documents
+
+    # >>> Create Role for Lambda
+    # MyLambdaRole:
+    #   Type: AWS::IAM::Role
+    #   Properties:
+    #     RoleName: MyLambdaRole-${opt:stage}
+    #     AssumeRolePolicyDocument:
+    #       Version: "2012-10-17"
+    #       Statement:
+    #         - Effect: Allow
+    #           Principal:
+    #             Service: apigateway.amazonaws.com
+    #           Action: sts:AssumeRole
+    #     Policies:
+    #       - PolicyName: MyLambdaPolicy
+    #         PolicyDocument:
+    #           Version: "2012-10-17"
+    #           Statement:
+    #             - Effect: Allow
+    #               Action:
+    #                 - lambda:InvokeFunction
+    #               Resource: "*"
+
+    # >>> Create SES Configuration
+    # SesConfiguration:
+    #   Type: AWS::SES::ConfigurationSet
+    #   Properties:
+    #     Name: ${opt:stage}-ses-configuration
+    
+    # >>> Create SNS Topic
+    # MySNSTopic:
+    #   Type: AWS::SNS::Topic
+    #   Properties:
+    #     TopicName: ${opt:stage}-sns-topic
+
+    # >>> Create DocumentDB Cluster
+    # https://docs.aws.amazon.com/documentdb/latest/developerguide/quick_start_cfn.html
+    # MyDocumentDBCluster:
+    #   Type: 'AWS::DocDB::DBCluster'
+    #   DeletionPolicy: Delete
+    #   Properties:
+    #     MasterUsername: ${env:DATABASE_USERNAME, 'local14624user'}
+    #     MasterUserPassword: ${env:DATABASE_PASSWORD, '14624982'}
+    #     DBClusterIdentifier: ${opt:stage}-cluster
+    #     BackupRetentionPeriod: 7
+    #     DeletionProtection: false
+    #     AvailabilityZones:
+    #       - us-east-1a
+    #     EngineVersion: 4.0.0
+    #     StorageEncrypted: false
+
+    # >>> Create DocumentDB Instance
+    # MyDocumentDBInstance:
+    #   Type: 'AWS::DocDB::DBInstance'
+    #   Properties:
+    #     DBInstanceIdentifier: ${opt:stage}-instance
+    #     DBClusterIdentifier: ${opt:stage}-cluster
+    #     AutoMinorVersionUpgrade: true
+    #     DBInstanceClass: db.t3.medium
+    #   DependsOn: MyDocumentDBCluster
+
+
+  Outputs:
+
+    AppHttpApiId:
+      Value: {Ref: AppHttpApi}
+      Export: 
+        Name: HttpApiId-${opt:stage}
+
+    AppS3BucketName:
+      Value:
+        Ref: AppS3Bucket
+    
+    AppS3BucketUrl:
+      Value: http://${opt:stage}-documents.s3-website-us-east-1.amazonaws.com
+      Export:
+        Name: AppS3BucketUrl
+    
+    # DocumentDBClusterEndpoint:
+    #   Description: The connection endpoint for the DocumentDB cluster.
+    #   Value: !GetAtt MyDocumentDBCluster.Endpoint
+
+    # DocumentDBClusterPort:
+    #   Description: The port of the DocumentDB cluster.
+    #   Value: !GetAtt MyDocumentDBCluster.Port
+
+    # DocumentDBInstanceIdentifier:
+    #   Description: The identifier of the DocumentDB instance.
+    #   Value: !Ref MyDocumentDBInstance
+    
+    # MyLambdaRoleOutput:
+    #   Value:
+    #     Fn::GetAtt:
+    #       - MyLambdaRole
+    #       - Arn

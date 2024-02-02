@@ -1,0 +1,19 @@
+services:
+
+  layers:
+    path: layers/
+
+  resources-loader:
+    path: resources
+    dependsOn: layers
+
+  goid-service:
+    path: services/sm-service
+    dependsOn: resources-loader
+    params:
+      AppLambdaLayerExport: ${layers.AppLambdaLayerExport}
+      AppHttpApiId: ${resources-loader.AppHttpApiId}
+      AppS3BucketName: ${resources-loader.AppS3BucketName}
+      AppS3BucketUrl: ${resources-loader.AppS3BucketUrl}
+      DocumentDBClusterEndpoint: ${resources-loader.DocumentDBClusterEndpoint}
+      DocumentDBClusterPort: ${resources-loader.DocumentDBClusterPort}
